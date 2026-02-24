@@ -2,7 +2,7 @@
   "name": "backlog-ai-reviewer",
   "displayName": "Backlog AI Code Reviewer",
   "description": "BacklogのPR・課題・GitリポジトリをもとにGitHub CopilotでAIコードレビューを実行するVSCode拡張機能",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "antigravity",
   "engines": {
     "vscode": "^1.90.0"
@@ -10,7 +10,6 @@
   "categories": [
     "Other"
   ],
-  "icon": "media/icon.png",
   "activationEvents": [
     "onView:backlogReviewTree",
     "onCommand:backlogReview.startReview",
@@ -154,13 +153,13 @@
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts"
   },
+  "dependencies": {
+    "diff": "^5.2.0"
+  },
   "devDependencies": {
     "@types/vscode": "^1.90.0",
     "@types/node": "^20.x",
-    "typescript": "^5.4.5"
-  },
-  "dependencies": {
-    "diff": "^5.2.0",
+    "typescript": "^5.4.5",
     "@types/diff": "^5.2.1"
   }
 }
