@@ -1,0 +1,166 @@
+{
+  "name": "backlog-ai-reviewer",
+  "displayName": "Backlog AI Code Reviewer",
+  "description": "BacklogのPR・課題・GitリポジトリをもとにGitHub CopilotでAIコードレビューを実行するVSCode拡張機能",
+  "version": "0.1.0",
+  "publisher": "antigravity",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onView:backlogReviewTree",
+    "onCommand:backlogReview.startReview",
+    "onCommand:backlogReview.startBranchReview",
+    "onCommand:backlogReview.startIssueReview",
+    "onCommand:backlogReview.selectModel"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "backlogReview.startReview",
+        "title": "Backlog: PRを選択してレビュー",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "backlogReview.startBranchReview",
+        "title": "Backlog: ブランチを選択してレビュー",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "backlogReview.startIssueReview",
+        "title": "Backlog: 課題を選択してレビュー",
+        "icon": "$(issues)"
+      },
+      {
+        "command": "backlogReview.selectModel",
+        "title": "Backlog: AIモデルを選択",
+        "icon": "$(robot)"
+      },
+      {
+        "command": "backlogReview.configure",
+        "title": "Backlog: 設定を開く",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "backlogReview.refresh",
+        "title": "Backlog: ツリーを更新",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "backlog-reviewer",
+          "title": "Backlog AI Reviewer",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "backlog-reviewer": [
+        {
+          "id": "backlogReviewTree",
+          "name": "Backlog Reviewer",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "backlogReview.startBranchReview",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "backlogReview.startIssueReview",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "backlogReview.selectModel",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@3"
+        },
+        {
+          "command": "backlogReview.refresh",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "backlogReview.configure",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "backlogReview.startReview",
+          "when": "view == backlogReviewTree && viewItem == pullRequest",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Backlog AI Reviewer",
+      "properties": {
+        "backlogReview.spaceKey": {
+          "type": "string",
+          "default": "",
+          "description": "BacklogスペースキーID (例: mycompany)"
+        },
+        "backlogReview.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Backlog APIキー"
+        },
+        "backlogReview.domain": {
+          "type": "string",
+          "default": "backlog.jp",
+          "enum": [
+            "backlog.jp",
+            "backlog.com"
+          ],
+          "description": "Backlogのドメイン"
+        },
+        "backlogReview.copilotModel": {
+          "type": "string",
+          "default": "gpt-4o",
+          "description": "GitHub Copilotで使用するモデル名 (コマンド 'Backlog: AIモデルを選択' から設定可能)"
+        },
+        "backlogReview.definitionDepth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "vscode.executeDefinitionProviderを再帰的に辿る最大深度"
+        },
+        "backlogReview.maxCharsPerFile": {
+          "type": "number",
+          "default": 20000,
+          "description": "1ファイルあたりのプロンプトに含める最大文字数"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@types/node": "^20.x",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "diff": "^5.2.0",
+    "@types/diff": "^5.2.1"
+  }
+}
