@@ -78,34 +78,19 @@
     "menus": {
       "view/title": [
         {
-          "command": "backlogReview.startBranchReview",
+          "command": "backlogReview.clearSelection",
           "when": "view == backlogReviewTree",
           "group": "navigation@1"
         },
         {
-          "command": "backlogReview.startIssueReview",
+          "command": "backlogReview.refresh",
           "when": "view == backlogReviewTree",
           "group": "navigation@2"
         },
         {
-          "command": "backlogReview.selectModel",
-          "when": "view == backlogReviewTree",
-          "group": "navigation@3"
-        },
-        {
-          "command": "backlogReview.clearSelection",
-          "when": "view == backlogReviewTree",
-          "group": "navigation@4"
-        },
-        {
-          "command": "backlogReview.refresh",
-          "when": "view == backlogReviewTree",
-          "group": "navigation@5"
-        },
-        {
           "command": "backlogReview.configure",
           "when": "view == backlogReviewTree",
-          "group": "navigation@6"
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [

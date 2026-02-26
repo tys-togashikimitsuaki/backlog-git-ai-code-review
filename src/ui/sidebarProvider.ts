@@ -125,6 +125,13 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                         'backlogReview.clearSelection'
                     ),
                     new BacklogTreeItem(
+                        `AIモデルを選択 (${cfg.copilotModel || '未選択'})`,
+                        'action',
+                        vscode.TreeItemCollapsibleState.None,
+                        undefined, undefined, undefined, undefined,
+                        'backlogReview.selectModel'
+                    ),
+                    new BacklogTreeItem(
                         '課題を選択',
                         'action',
                         vscode.TreeItemCollapsibleState.None,
@@ -137,13 +144,6 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                         vscode.TreeItemCollapsibleState.None,
                         undefined, undefined, undefined, undefined,
                         'backlogReview.startBranchReview'
-                    ),
-                    new BacklogTreeItem(
-                        'AIモデルを選択',
-                        'action',
-                        vscode.TreeItemCollapsibleState.None,
-                        undefined, undefined, undefined, undefined,
-                        'backlogReview.selectModel'
                     ),
                 ];
 
@@ -166,7 +166,7 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                     }
                 }
 
-                items.push(new BacklogTreeItem('--- プルリクエストを指定してレビュー ---', 'message', vscode.TreeItemCollapsibleState.None));
+                items.push(new BacklogTreeItem('「プルリク」を指定してレビュー', 'message', vscode.TreeItemCollapsibleState.None));
 
                 try {
                     const projects = await this.client.listProjects();
