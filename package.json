@@ -2,7 +2,7 @@
   "name": "backlog-ai-reviewer",
   "displayName": "Backlog AI Code Reviewer",
   "description": "BacklogのPR・課題・GitリポジトリをもとにGitHub CopilotでAIコードレビューを実行するVSCode拡張機能",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "antigravity",
   "engines": {
     "vscode": "^1.90.0"

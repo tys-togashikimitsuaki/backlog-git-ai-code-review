@@ -138,7 +138,13 @@ export function activate(context: vscode.ExtensionContext) {
             const cfg = getConfig();
             const client = new BacklogClient(cfg.spaceKey, cfg.apiKey, cfg.domain);
             try {
-                await client.addIssueComment(args.issueKey, args.content);
+                // Backlog API error prevention: strip emojis (Extended Pictographic) 
+                // and 4-byte characters (surrogate pairs) which often cause DB save errors
+                const safeContent = args.content
+                    .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+                    .replace(/\p{Emoji_Presentation}/gu, '');
+
+                await client.addIssueComment(args.issueKey, safeContent);
                 if (args.panel && typeof args.panel.postResult === 'function') {
                     args.panel.postResult(true);
                 } else {
