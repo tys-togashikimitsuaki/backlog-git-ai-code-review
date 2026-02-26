@@ -118,6 +118,13 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                 // ルートレベル: 固定アクション + 現在の選択状況 + プロジェクト一覧
                 const items: BacklogTreeItem[] = [
                     new BacklogTreeItem(
+                        '選択をクリア',
+                        'action',
+                        vscode.TreeItemCollapsibleState.None,
+                        undefined, undefined, undefined, undefined,
+                        'backlogReview.clearSelection'
+                    ),
+                    new BacklogTreeItem(
                         '課題を選択',
                         'action',
                         vscode.TreeItemCollapsibleState.None,
@@ -130,13 +137,6 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                         vscode.TreeItemCollapsibleState.None,
                         undefined, undefined, undefined, undefined,
                         'backlogReview.startBranchReview'
-                    ),
-                    new BacklogTreeItem(
-                        '選択をクリア',
-                        'action',
-                        vscode.TreeItemCollapsibleState.None,
-                        undefined, undefined, undefined, undefined,
-                        'backlogReview.clearSelection'
                     ),
                     new BacklogTreeItem(
                         'AIモデルを選択',
