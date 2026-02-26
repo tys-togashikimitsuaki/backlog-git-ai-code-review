@@ -2,7 +2,7 @@
   "name": "backlog-ai-reviewer",
   "displayName": "Backlog AI Code Reviewer",
   "description": "BacklogのPR・課題・GitリポジトリをもとにGitHub CopilotでAIコードレビューを実行するVSCode拡張機能",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "publisher": "antigravity",
   "engines": {
     "vscode": "^1.90.0"
@@ -15,7 +15,8 @@
     "onCommand:backlogReview.startReview",
     "onCommand:backlogReview.startBranchReview",
     "onCommand:backlogReview.startIssueReview",
-    "onCommand:backlogReview.selectModel"
+    "onCommand:backlogReview.selectModel",
+    "onCommand:backlogReview.clearSelection"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -27,8 +28,13 @@
       },
       {
         "command": "backlogReview.startBranchReview",
-        "title": "Backlog: ブランチを選択してレビュー",
+        "title": "Backlog: ブランチを指定してレビュー",
         "icon": "$(git-branch)"
+      },
+      {
+        "command": "backlogReview.clearSelection",
+        "title": "Backlog: 選択をクリア",
+        "icon": "$(clear-all)"
       },
       {
         "command": "backlogReview.startIssueReview",
@@ -87,14 +93,19 @@
           "group": "navigation@3"
         },
         {
-          "command": "backlogReview.refresh",
+          "command": "backlogReview.clearSelection",
           "when": "view == backlogReviewTree",
           "group": "navigation@4"
         },
         {
-          "command": "backlogReview.configure",
+          "command": "backlogReview.refresh",
           "when": "view == backlogReviewTree",
           "group": "navigation@5"
+        },
+        {
+          "command": "backlogReview.configure",
+          "when": "view == backlogReviewTree",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [

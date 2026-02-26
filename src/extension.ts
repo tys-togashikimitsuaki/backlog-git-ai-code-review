@@ -128,6 +128,14 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('backlogReview.clearSelection', () => {
+            sidebarProvider.state = {};
+            sidebarProvider.refresh();
+            vscode.window.showInformationMessage('選択状態をクリアしました。');
+        })
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('backlogReview.selectModel', async () => {
             await selectCopilotModel();
         })
@@ -247,7 +255,8 @@ async function startBranchSelectionFlow(
         branches: branchPair
     });
 
-    vscode.window.showInformationMessage(`ブランチ 「${branchPair.baseBranch} ← ${branchPair.compareBranch}」 を選択しました。`);
+    vscode.window.showInformationMessage(`ブランチ 「${branchPair.baseBranch} ← ${branchPair.compareBranch}」 を指定しました。AIレビューを開始します...`);
+    vscode.commands.executeCommand('backlogReview.startReview');
 }
 
 async function promptBranchPairManually(): Promise<{ baseBranch: string; compareBranch: string } | null> {
@@ -734,6 +743,32 @@ async function generateFileDiffsFromLocalGit(
     progress.report({ message: `ローカルGit差分を取得中: ${baseBranch}..${compareBranch}` });
 
     await runGit(repoPath, ['rev-parse', '--git-dir']);
+
+    const shouldUpdate = await vscode.window.showInformationMessage(
+        `マージ元 (${baseBranch}) とマージ先 (${compareBranch}) のブランチを最新にしてよろしいですか？\n※未コミットの変更がある場合は失敗する可能性があります。`,
+        { modal: true },
+        'はい',
+        'いいえ'
+    );
+
+    if (shouldUpdate === 'はい') {
+        progress.report({ message: `ブランチを最新状態に更新中...` });
+        try {
+            await runGit(repoPath, ['fetch', '--all']);
+
+            const checkoutAndPull = async (branch: string) => {
+                const localBranch = branch.replace(/^origin\//, '').replace(/^refs\/remotes\/origin\//, '').replace(/^refs\/heads\//, '');
+                await runGit(repoPath, ['checkout', localBranch]);
+                await runGit(repoPath, ['pull', 'origin', localBranch]);
+            };
+
+            await checkoutAndPull(baseBranch);
+            await checkoutAndPull(compareBranch);
+        } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            vscode.window.showErrorMessage(`ブランチの更新に失敗しました。現在の状態で続行します: ${msg}`);
+        }
+    }
 
     const baseRef = await resolveLocalGitRef(repoPath, baseBranch);
     const compareRef = await resolveLocalGitRef(repoPath, compareBranch);

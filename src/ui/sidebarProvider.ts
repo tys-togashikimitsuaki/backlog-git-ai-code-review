@@ -38,6 +38,8 @@ export class BacklogTreeItem extends vscode.TreeItem {
                     this.iconPath = new vscode.ThemeIcon('issues');
                 } else if (commandId === 'backlogReview.startBranchReview') {
                     this.iconPath = new vscode.ThemeIcon('git-branch');
+                } else if (commandId === 'backlogReview.clearSelection') {
+                    this.iconPath = new vscode.ThemeIcon('clear-all');
                 } else if (commandId === 'backlogReview.startReview') {
                     this.iconPath = new vscode.ThemeIcon('git-pull-request');
                 } else if (commandId === 'backlogReview.selectModel') {
@@ -123,11 +125,18 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                         'backlogReview.startIssueReview'
                     ),
                     new BacklogTreeItem(
-                        'ブランチを選択',
+                        '--- ブランチを指定してレビュー ---',
                         'action',
                         vscode.TreeItemCollapsibleState.None,
                         undefined, undefined, undefined, undefined,
                         'backlogReview.startBranchReview'
+                    ),
+                    new BacklogTreeItem(
+                        '選択をクリア',
+                        'action',
+                        vscode.TreeItemCollapsibleState.None,
+                        undefined, undefined, undefined, undefined,
+                        'backlogReview.clearSelection'
                     ),
                     new BacklogTreeItem(
                         'AIモデルを選択',
@@ -157,7 +166,7 @@ export class BacklogSidebarProvider implements vscode.TreeDataProvider<BacklogTr
                     }
                 }
 
-                items.push(new BacklogTreeItem('--- プルリクエスト ---', 'message', vscode.TreeItemCollapsibleState.None));
+                items.push(new BacklogTreeItem('--- プルリクエストを指定してレビュー ---', 'message', vscode.TreeItemCollapsibleState.None));
 
                 try {
                     const projects = await this.client.listProjects();
