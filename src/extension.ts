@@ -698,6 +698,18 @@ async function resolveGitRepoRoot(repoPath: string): Promise<string> {
     return root.trim();
 }
 
+async function getGitFileContent(repoPath: string, ref: string, filePath: string): Promise<string> {
+    try {
+        return await runGit(repoPath, ['show', `${ref}:${filePath}`]);
+    } catch {
+        return '';
+    }
+}
+
+function stripGitDiffPrefix(filePath: string): string {
+    return filePath.replace(/^[ab]\//, '');
+}
+
 function buildLocalGitRefCandidates(ref: string): string[] {
     const r = ref.trim();
     if (!r) { return []; }
@@ -791,11 +803,13 @@ async function generateFileDiffsFromLocalGit(
     const baseRef = await resolveLocalGitRef(repoRoot, baseBranch);
     const compareRef = await resolveLocalGitRef(repoRoot, compareBranch);
 
-    const changed = await runGit(repoRoot, ['diff', '--name-only', '--diff-filter=ACMR', `${baseRef}..${compareRef}`]);
-    const files = changed
+    const changed = await runGit(repoRoot, ['diff', '--name-only', '--find-renames', baseRef, compareRef]);
+    const changedFiles = changed
         .split('\n')
         .map(s => s.trim())
-        .filter(Boolean)
+        .filter(Boolean);
+
+    const files = changedFiles
         .filter(f => SOURCE_EXT.test(f))
         .slice(0, 30);
 
@@ -803,24 +817,27 @@ async function generateFileDiffsFromLocalGit(
     const fileContents = new Map<string, string>();
 
     for (const filePath of files) {
-        const [baseContent, branchContent] = await Promise.all([
-            runGit(repoRoot, ['show', `${baseRef}:${filePath}`]).catch(() => ''),
-            runGit(repoRoot, ['show', `${compareRef}:${filePath}`]).catch(() => ''),
-        ]);
+        const diffText = await runGit(repoRoot, ['diff', '--find-renames', '--unified=5', baseRef, compareRef, '--', filePath]).catch(() => '');
+        if (!diffText.trim()) { continue; }
 
-        if (baseContent === branchContent) { continue; }
-
-        const diffText = generateUnifiedDiff(baseContent, branchContent, filePath, baseBranch, compareBranch);
         const parsed = parseDiff(diffText);
         for (const fd of parsed) {
             fileDiffs.push({ ...fd, unifiedDiff: diffText });
+
+            const normalizedPath = stripGitDiffPrefix(fd.newPath || fd.oldPath);
+            if (!fileContents.has(normalizedPath)) {
+                const branchContent = await getGitFileContent(repoRoot, compareRef, normalizedPath);
+                fileContents.set(normalizedPath, branchContent);
+            }
         }
-        fileContents.set(filePath, branchContent);
     }
 
     if (fileDiffs.length === 0) {
+        const diagnostic = changedFiles.length > 0
+            ? `\nchangedFiles: ${changedFiles.length}\n対象外ファイル例:\n${changedFiles.slice(0, 10).join('\n')}`
+            : `\nresolvedBaseRef: ${baseRef}\nresolvedCompareRef: ${compareRef}`;
         throw new Error(
-            `ローカルGitでも差分が見つかりませんでした。\nrepo: ${repoRoot}\nbase: ${baseBranch}\ncompare: ${compareBranch}`
+            `ローカルGitでも差分が見つかりませんでした。\nrepo: ${repoRoot}\nbase: ${baseBranch}\ncompare: ${compareBranch}${diagnostic}`
         );
     }
 
