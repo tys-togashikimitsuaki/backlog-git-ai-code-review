@@ -668,8 +668,16 @@ async function pickLocalRepositoryPath(): Promise<string | null> {
     }
 
     const selected = folder[0].fsPath;
-    cachedLocalRepoPath = selected;
-    return selected;
+
+    try {
+        const repoRoot = await resolveGitRepoRoot(selected);
+        cachedLocalRepoPath = repoRoot;
+        return repoRoot;
+    } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        vscode.window.showErrorMessage(`選択したフォルダからGitリポジトリを特定できませんでした: ${msg}`);
+        return null;
+    }
 }
 
 async function runGit(repoPath: string, args: string[]): Promise<string> {
@@ -683,6 +691,11 @@ async function runGit(repoPath: string, args: string[]): Promise<string> {
         const msg = e instanceof Error ? e.message : String(e);
         throw new Error(`git ${args.join(' ')} failed: ${msg}`);
     }
+}
+
+async function resolveGitRepoRoot(repoPath: string): Promise<string> {
+    const root = await runGit(repoPath, ['rev-parse', '--show-toplevel']);
+    return root.trim();
 }
 
 function buildLocalGitRefCandidates(ref: string): string[] {
@@ -740,9 +753,14 @@ async function generateFileDiffsFromLocalGit(
     compareBranch: string,
     progress: vscode.Progress<{ message?: string }>
 ): Promise<{ fileDiffs: import('./git/diffAnalyzer').FileDiff[]; fileContents: Map<string, string> }> {
+    const repoRoot = await resolveGitRepoRoot(repoPath);
+    if (repoRoot !== repoPath) {
+        cachedLocalRepoPath = repoRoot;
+    }
+
     progress.report({ message: `ローカルGit差分を取得中: ${baseBranch}..${compareBranch}` });
 
-    await runGit(repoPath, ['rev-parse', '--git-dir']);
+    await runGit(repoRoot, ['rev-parse', '--git-dir']);
 
     const shouldUpdate = await vscode.window.showInformationMessage(
         `マージ元 (${baseBranch}) とマージ先 (${compareBranch}) のブランチを最新にしてよろしいですか？\n※未コミットの変更がある場合は失敗する可能性があります。`,
@@ -754,12 +772,12 @@ async function generateFileDiffsFromLocalGit(
     if (shouldUpdate === 'はい') {
         progress.report({ message: `ブランチを最新状態に更新中...` });
         try {
-            await runGit(repoPath, ['fetch', '--all']);
+            await runGit(repoRoot, ['fetch', '--all']);
 
             const checkoutAndPull = async (branch: string) => {
                 const localBranch = branch.replace(/^origin\//, '').replace(/^refs\/remotes\/origin\//, '').replace(/^refs\/heads\//, '');
-                await runGit(repoPath, ['checkout', localBranch]);
-                await runGit(repoPath, ['pull', 'origin', localBranch]);
+                await runGit(repoRoot, ['checkout', localBranch]);
+                await runGit(repoRoot, ['pull', 'origin', localBranch]);
             };
 
             await checkoutAndPull(baseBranch);
@@ -770,10 +788,10 @@ async function generateFileDiffsFromLocalGit(
         }
     }
 
-    const baseRef = await resolveLocalGitRef(repoPath, baseBranch);
-    const compareRef = await resolveLocalGitRef(repoPath, compareBranch);
+    const baseRef = await resolveLocalGitRef(repoRoot, baseBranch);
+    const compareRef = await resolveLocalGitRef(repoRoot, compareBranch);
 
-    const changed = await runGit(repoPath, ['diff', '--name-only', '--diff-filter=ACMR', `${baseRef}..${compareRef}`]);
+    const changed = await runGit(repoRoot, ['diff', '--name-only', '--diff-filter=ACMR', `${baseRef}..${compareRef}`]);
     const files = changed
         .split('\n')
         .map(s => s.trim())
@@ -786,8 +804,8 @@ async function generateFileDiffsFromLocalGit(
 
     for (const filePath of files) {
         const [baseContent, branchContent] = await Promise.all([
-            runGit(repoPath, ['show', `${baseRef}:${filePath}`]).catch(() => ''),
-            runGit(repoPath, ['show', `${compareRef}:${filePath}`]).catch(() => ''),
+            runGit(repoRoot, ['show', `${baseRef}:${filePath}`]).catch(() => ''),
+            runGit(repoRoot, ['show', `${compareRef}:${filePath}`]).catch(() => ''),
         ]);
 
         if (baseContent === branchContent) { continue; }
@@ -802,7 +820,7 @@ async function generateFileDiffsFromLocalGit(
 
     if (fileDiffs.length === 0) {
         throw new Error(
-            `ローカルGitでも差分が見つかりませんでした。\nrepo: ${repoPath}\nbase: ${baseBranch}\ncompare: ${compareBranch}`
+            `ローカルGitでも差分が見つかりませんでした。\nrepo: ${repoRoot}\nbase: ${baseBranch}\ncompare: ${compareBranch}`
         );
     }
 
