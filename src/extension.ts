@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
+import * as path from 'path';
 import { promisify } from 'util';
 import { BacklogClient, BacklogIssue, BacklogPullRequest, BacklogRepository } from './backlog/backlogClient';
 import { generateUnifiedDiff, parseDiff, getChangedLineNumbers } from './git/diffAnalyzer';
@@ -681,9 +682,9 @@ async function pickLocalRepositoryPath(): Promise<string | null> {
 }
 
 async function runGit(repoPath: string, args: string[]): Promise<string> {
+    const normalizedRepoPath = normalizeGitRepoPath(repoPath);
     try {
-        const { stdout } = await execFileAsync('git', args, {
-            cwd: repoPath,
+        const { stdout } = await execFileAsync('git', ['-C', normalizedRepoPath, ...args], {
             maxBuffer: 20 * 1024 * 1024,
         });
         return stdout;
@@ -691,6 +692,13 @@ async function runGit(repoPath: string, args: string[]): Promise<string> {
         const msg = e instanceof Error ? e.message : String(e);
         throw new Error(`git ${args.join(' ')} failed: ${msg}`);
     }
+}
+
+function normalizeGitRepoPath(repoPath: string): string {
+    if (process.platform === 'win32') {
+        return path.win32.normalize(repoPath);
+    }
+    return repoPath;
 }
 
 async function resolveGitRepoRoot(repoPath: string): Promise<string> {
@@ -708,6 +716,17 @@ async function getGitFileContent(repoPath: string, ref: string, filePath: string
 
 function stripGitDiffPrefix(filePath: string): string {
     return filePath.replace(/^[ab]\//, '');
+}
+
+function normalizeGitFilePath(filePath: string): string {
+    return stripGitDiffPrefix(filePath.trim()).replace(/\\/g, '/');
+}
+
+function parseGitNameOnlyOutput(output: string): string[] {
+    return output
+        .split('\0')
+        .map(s => normalizeGitFilePath(s))
+        .filter(Boolean);
 }
 
 function buildLocalGitRefCandidates(ref: string): string[] {
@@ -803,11 +822,8 @@ async function generateFileDiffsFromLocalGit(
     const baseRef = await resolveLocalGitRef(repoRoot, baseBranch);
     const compareRef = await resolveLocalGitRef(repoRoot, compareBranch);
 
-    const changed = await runGit(repoRoot, ['diff', '--name-only', '--find-renames', baseRef, compareRef]);
-    const changedFiles = changed
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean);
+    const changed = await runGit(repoRoot, ['diff', '--name-only', '-z', '--find-renames', baseRef, compareRef]);
+    const changedFiles = parseGitNameOnlyOutput(changed);
 
     const files = changedFiles
         .filter(f => SOURCE_EXT.test(f))
@@ -824,7 +840,7 @@ async function generateFileDiffsFromLocalGit(
         for (const fd of parsed) {
             fileDiffs.push({ ...fd, unifiedDiff: diffText });
 
-            const normalizedPath = stripGitDiffPrefix(fd.newPath || fd.oldPath);
+            const normalizedPath = normalizeGitFilePath(fd.newPath || fd.oldPath);
             if (!fileContents.has(normalizedPath)) {
                 const branchContent = await getGitFileContent(repoRoot, compareRef, normalizedPath);
                 fileContents.set(normalizedPath, branchContent);
